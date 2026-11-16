@@ -200,7 +200,7 @@ record_result(fixtures, fixture_id, home_score, away_score)
 - Validates all conditions before mutation.
 - Returns the updated fixture.
 
-### Shared mutation rules
+### Shared mutation rules  touch 
 
 - Team registration mutates the teams list only after validation.
 - Result recording mutates fixtures only after successful validation.
