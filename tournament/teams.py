@@ -1,17 +1,18 @@
 
 def validate_team_name(name, teams):
     """
-    Validate a proposed team name.
+    Validate and normalize a proposed team name.
 
-    Returns the trimmed team name if valid.
-    Raises TypeError or ValueError if invalid.
+    Returns the cleaned team name.
+    Raises TypeError for an invalid teams container.
+    Raises ValueError for invalid team-name data.
     """
 
     if not isinstance(teams, list):
         raise TypeError("Teams must be stored in a list.")
 
     if not isinstance(name, str):
-        raise TypeError("Team name must be a string.")
+        raise ValueError("Team name must be a string.")
 
     cleaned_name = name.strip()
 
@@ -21,6 +22,9 @@ def validate_team_name(name, teams):
         )
 
     for team in teams:
+        if not isinstance(team, dict):
+            raise ValueError("Every existing team must be a dictionary.")
+
         existing_name = team.get("name")
 
         if isinstance(existing_name, str):
@@ -32,35 +36,52 @@ def validate_team_name(name, teams):
 
 def _generate_team_id(teams):
     """
-    Generate the next sequential team ID.
+    Generate the next available canonical team ID.
 
-    Uses the highest existing numeric suffix to avoid reusing IDs.
+    IDs follow the format TM001, TM002, etc.
+    Existing IDs must be valid and unique.
     """
 
     highest_id = 0
+    existing_ids = set()
 
     for team in teams:
+        if not isinstance(team, dict):
+            raise ValueError("Every existing team must be a dictionary.")
+
         team_id = team.get("id")
 
-        if not isinstance(team_id, str) or not team_id.startswith("TM"):
+        if (
+            not isinstance(team_id, str)
+            or len(team_id) != 5
+            or not team_id.startswith("TM")
+            or not team_id[2:].isdigit()
+            or int(team_id[2:]) < 1
+        ):
             raise ValueError("An existing team has an invalid ID.")
 
-        numeric_part = team_id[2:]
+        if team_id in existing_ids:
+            raise ValueError("Duplicate team IDs are not allowed.")
 
-        if not numeric_part.isdigit() or int(numeric_part) < 1:
-            raise ValueError("An existing team has an invalid ID.")
+        existing_ids.add(team_id)
 
-        highest_id = max(highest_id, int(numeric_part))
+        numeric_part = int(team_id[2:])
+        highest_id = max(highest_id, numeric_part)
+
+    if highest_id >= 999:
+        raise ValueError("No more team IDs are available.")
 
     return f"TM{highest_id + 1:03d}"
 
 
 def register_team(teams, name):
     """
-    Validate and register a team.
+    Register a new tournament team.
 
-    Mutates the teams list only after all validation succeeds.
-    Returns the newly registered team dictionary.
+    A tournament supports a maximum of eight registered teams.
+    Team registration validates all data before modifying the list.
+
+    Returns the newly created team dictionary.
     """
 
     if not isinstance(teams, list):
@@ -71,8 +92,10 @@ def register_team(teams, name):
     if len(teams) >= 8:
         raise ValueError("A tournament cannot have more than 8 teams.")
 
+    team_id = _generate_team_id(teams)
+
     team = {
-        "id": _generate_team_id(teams),
+        "id": team_id,
         "name": cleaned_name
     }
 
@@ -85,8 +108,8 @@ def list_teams(teams):
     """
     Return a copy of the registered teams.
 
-    Changes to the returned dictionaries will not modify
-    the original team records.
+    The returned list and its team dictionaries are independent
+    of the original list.
     """
 
     if not isinstance(teams, list):
